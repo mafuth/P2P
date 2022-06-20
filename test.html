@@ -1,0 +1,54 @@
+<video id="stream-local" autoplay playsinline></video>
+<script>
+async function startCapture(displayMediaOptions) {
+  let captureStream = null;
+
+  try {
+    captureStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+  } catch(err) {
+    console.error("Error: " + err);
+  }
+  document.getElementById('stream-local').srcObject = captureStream;
+  return captureStream;
+}
+startCapture();
+
+var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    peer.on('call', function(call) {
+        $('.call').hide();
+        $('.answer-call').show();
+        $('.answer-call').click(function(){
+            getUserMedia({video: true, audio: true}, function(stream) {
+                call.answer(stream); // Answer the call with an A/V stream.
+                call.on('stream', function(remoteStream) {
+                    document.getElementById('stream-local').srcObject = stream;
+                    document.getElementById('stream-peer').srcObject = remoteStream;
+                    $('.streams').show();
+                    $('.call').hide();
+                    $('.answer-call').hide();
+                });
+            }, function(err) {
+                console.log('Failed to get local stream' ,err);
+            });
+        });
+    });
+    
+$('.call').click(function(){
+    if (conn) {
+        var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+        getUserMedia({video: true, audio: true}, function(stream) {
+        var call = peer.call(other, stream);
+        call.on('stream', function(remoteStream) {
+            document.getElementById('stream-local').srcObject = stream;
+            document.getElementById('stream-peer').srcObject = remoteStream;
+            $('.streams').show();
+            $('.call').hide();
+        });
+        }, function(err) {
+            console.log('Failed to get local stream' ,err);
+        });
+    }else{
+        alert('No connection found');
+    }
+});
+</script>
