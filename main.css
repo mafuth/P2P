@@ -4,3 +4,10 @@
 .hidden{
     display:none;
 }
+.obf-cover{
+    object-fit: cover;
+}
+.call-video{
+    width:100%;
+    height: 50vh;
+}

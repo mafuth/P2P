@@ -23,8 +23,6 @@ var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || nav
                 call.on('stream', function(remoteStream) {
                     document.getElementById('stream-local').srcObject = stream;
                     document.getElementById('stream-peer').srcObject = remoteStream;
-                    $('.streams').show();
-                    $('.call').hide();
                     $('.answer-call').hide();
                 });
             }, function(err) {
@@ -41,8 +39,6 @@ $('.call').click(function(){
         call.on('stream', function(remoteStream) {
             document.getElementById('stream-local').srcObject = stream;
             document.getElementById('stream-peer').srcObject = remoteStream;
-            $('.streams').show();
-            $('.call').hide();
         });
         }, function(err) {
             console.log('Failed to get local stream' ,err);

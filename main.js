@@ -126,6 +126,12 @@ function initialize() {
             $('.send-message').click(function(){
                 send();
             });
+            $('.new-call-btn').click(function(){
+                setupCall();
+            });
+            $('.initiateCall').click(function(){
+                initiateCall();
+            });
         }else{
             showErrorMessage('Error generating an id');
         }
@@ -168,7 +174,52 @@ function initialize() {
     peer.on('error', function (err) {
         showErrorMessage(err);
     });
+    var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    peer.on('call', function(call) {
+        $('#callModal').modal('show');
+        $('.initiateCall').hide();
+        $('.acceptCall').show();
+        $('.acceptCall').click(function(){
+            getUserMedia({video: true, audio: true}, function(stream) {
+                call.answer(stream); // Answer the call with an A/V stream.
+                call.on('stream', function(remoteStream) {
+                    document.getElementById('my-stream').srcObject = stream;
+                    document.getElementById('peer-stream').srcObject = remoteStream;
+                    $('.acceptCall').hide();
+                });
+            }, function(err) {
+                showErrorMessage('Failed to get local stream: ' + err);
+            });
+        });
+    });
 };
+function setupCall(){
+    var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    getUserMedia({video: true, audio: true}, function(stream) {
+        document.getElementById('my-stream').srcObject = stream;
+        $('.initiateCall').show();
+    }, function(err) {
+        showErrorMessage('Failed to get local stream: ' + err);
+    });
+}
+function initiateCall(){
+    if (conn) {
+        var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+        getUserMedia({video: true, audio: true}, function(stream) {
+        var call = peer.call(other, stream);
+        call.on('stream', function(remoteStream) {
+            document.getElementById('my-stream').srcObject = stream;
+            document.getElementById('peer-stream').srcObject = remoteStream;
+            $('.initiateCall').hide();
+            $('.acceptCall').hide();
+        });
+        }, function(err) {
+            showErrorMessage('Failed to get local stream: ' + err);
+        });
+    }else{
+        showErrorMessage('No connection found');
+    }
+}
 function recive(){
     conn.on('data', function (data) {
         var data = decrypt(data,other);
