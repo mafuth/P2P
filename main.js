@@ -3,7 +3,8 @@ var peer = "";
 var conn =  "";
 var me = "";
 var other = "";
-var b64 = "";
+var fileHash = "";
+const torrentClient = new WebTorrent();
 
 //custom side toast functions
 function showSuccessMessage(message){
@@ -48,6 +49,17 @@ function showInfoMessage(message){
         }
     }).showToast();
 }
+// Human readable bytes util
+function prettyBytes(num) {
+    const units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    const neg = num < 0
+    if (neg) num = -num
+    if (num < 1) return (neg ? '-' : '') + num + ' B'
+    const exponent = Math.min(Math.floor(Math.log(num) / Math.log(1000)), units.length - 1)
+    const unit = units[exponent]
+    num = Number((num / Math.pow(1000, exponent)).toFixed(2))
+    return (neg ? '-' : '') + num + ' ' + unit
+}
 
 //encryption and decryption of data
 function encrypt(msg,key){
@@ -69,17 +81,23 @@ function buildMessage(type,data){
 }
 
 //file reader
-function readFileBase64() {
+function seedFile() {
+    $('.send-message').hide();
     if (this.files && this.files[0]) {
-        var FR= new FileReader();
-        FR.addEventListener("load", function(e) {
-            b64 = e.target.result;
-            return b64;
-        }); 
-        FR.readAsDataURL( this.files[0] );
+        torrentClient.seed(this.files[0], function (torrent) {
+            torrentDATA = torrent;
+            fileHash = torrent.infoHash;
+            const interval = setInterval(function () {
+                showWormholeStatus(torrent.uploadSpeed,torrent.downloadSpeed);
+            }, 1000)
+            torrent.on('done', function () {
+                clearInterval(interval)
+            })
+        })
     }
+    $('.send-message').show();
 };
-document.getElementById("image-upload").addEventListener("change", readFileBase64);
+document.getElementById("file-upload").addEventListener("change", seedFile);
 
 //peerjs functions
 function initialize() {
@@ -136,12 +154,16 @@ function initialize() {
         peer.id = lastPeerId;
         peer._lastServerId = lastPeerId;
         peer.reconnect();
+        showErrorMessage('Connection destroyed');
+        $('.chat-footer').hide();
+        $('.connectedTO').html('');
     });
     peer.on('close', function() {
         conn = null;
         $('.chat').html('');
         showErrorMessage('Connection destroyed');
         $('.chat-footer').hide();
+        $('.connectedTO').html('');
     });
     peer.on('error', function (err) {
         showErrorMessage(err);
@@ -151,18 +173,61 @@ function recive(){
     conn.on('data', function (data) {
         var data = decrypt(data,other);
         if(data != ""){
-            buildMessage('from',data);
+            data = JSON.parse(data);
+            if(data['type'] == 'message'){
+                buildMessage('from',data['data']);
+            }else{
+                showSuccessMessage('Recived a wormhole connection');
+                showInfoMessage('Starting file transfer');
+                torrentClient.add('magnet:?xt=urn:btih:'+ data['data'] + '&dn=290436838_531413252000406_1788028471575614066_n.jpg&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337&tr=udp%3A%2F%2Fexplodie.org%3A6969&tr=udp%3A%2F%2Ftracker.empire-js.us%3A1337', onTorrent);
+            }
         }
     });
     conn.on('close', function () {
         $('.chat').html('');
         showErrorMessage("Connection closed");
         $('.chat-footer').hide();
+        $('.connectedTO').html('');
     });
 };
+function showWormholeStatus(upload,download){
+    $('#upSpeed').html('Upload: '+prettyBytes(upload)+'/s');
+    $('#downSpeed').html('Download: '+prettyBytes(download)+'/s');
+}
+function checkImage(fileName){
+    fileName = fileName.toLowerCase()
+    if(fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.gif')){
+        return true;
+    }else{
+        return false;
+    }
+}
+function onTorrent(torrent){
+    const interval = setInterval(function () {
+        showWormholeStatus(torrent.uploadSpeed,torrent.downloadSpeed);
+    }, 1000)
+    torrent.on('done', function () {
+        clearInterval(interval)
+    })
+
+    torrent.files.forEach(function (file) {
+        file.getBlobURL(function (err, url) {
+          if (err) return console.log(err.message)
+          if(checkImage(file.name) == true){
+            buildMessage('from','<img src="'+url+'" class="w-100"/>');
+          }
+          if(file.name.endsWith('.mp4')){
+            buildMessage('from','<video src="'+url+'" class="w-100" controls></video>');
+          }
+          if(!file.name.endsWith('.mp4') && checkImage(file.name) == false){
+            buildMessage('from','<a href="' + url + '" target="_blank">Download File: ' + file.name + '</a>');
+          }
+        })
+    })
+}
 function send(){
     if($('.message-text').val() != ""){
-        var msg = encrypt($('.message-text').val(),me);
+        var msg = encrypt(JSON.stringify({type:'message', data: $('.message-text').val()}),me);
         if (conn && conn.open) {
             conn.send(msg);
             buildMessage('to',$('.message-text').val());
@@ -171,20 +236,36 @@ function send(){
             $('.chat').html('');
             showErrorMessage('connection closed');
             $('.chat-footer').hide();
+            $('.connectedTO').html('');
         }
     }
-    if(b64 != ""){
-        var img = '<img class="w-100 h-100 rounded" src="' + b64 + '"/>';
-        var msg = encrypt(img,me);
+    if(fileHash != ""){
+        var msg = encrypt(JSON.stringify({type:'file', data: fileHash}),me);
         if (conn && conn.open) {
-            conn.send(msg);
-            buildMessage('to',img);
+            conn.send(msg)
+            torrentDATA.files.forEach(function (file) {
+                file.getBlobURL(function (err, url) {
+                  if (err) return console.log(err.message)
+                  if(checkImage(file.name) == true){
+                    buildMessage('from','<img src="'+url+'" class="w-50 h-50"/>');
+                  }
+                  if(file.name.endsWith('.mp4')){
+                    buildMessage('from','<video src="'+url+'" class="w-50 h-50" controls></video>');
+                  }
+                  if(!file.name.endsWith('.mp4') && checkImage(file.name) == false){
+                    buildMessage('from','<a href="' + url + '" target="_blank">Download File: ' + file.name + '</a>');
+                  }
+                })
+            })
+            showSuccessMessage('Wormhole established sharing file');
             $('#image-upload').val('');
-            b64 = "";
+            torrentDATA = "";
+            fileHash = "";
         }else{
             $('.chat').html('');
             showErrorMessage('connection closed');
             $('.chat-footer').hide();
+            $('.connectedTO').html('');
         }
     }
 };
@@ -192,6 +273,7 @@ function join(id) {
     if (conn) {
         showInfoMessage("Closing current connection");
         $('.chat-footer').hide();
+        $('.connectedTO').html('');
         $('.chat').html('');
         conn.close();
     }
