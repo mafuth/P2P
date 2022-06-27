@@ -114,6 +114,7 @@ function initialize() {
             $('.my-hash-qr').attr('src',qr);
             $('.my-hash-qr').show();
             $('.new-con-btn').show();
+            $('.new-call-btn').show();
             $('.myID').html(me);
             $('.chat').html('');
             showSuccessMessage('Connection made to peer network');
@@ -151,6 +152,7 @@ function initialize() {
         showSuccessMessage("Connected to: " + conn.peer);
         $('.connectedTO').html(conn.peer);
         $('.chat-footer').show();
+        $('.new-call-btn').show();
         other = conn.peer;
         recive()
     });
@@ -163,6 +165,7 @@ function initialize() {
         showErrorMessage('Connection destroyed');
         $('.chat-footer').hide();
         $('.connectedTO').html('');
+        $('.new-call-btn').hide();
     });
     peer.on('close', function() {
         conn = null;
@@ -170,6 +173,7 @@ function initialize() {
         showErrorMessage('Connection destroyed');
         $('.chat-footer').hide();
         $('.connectedTO').html('');
+        $('.new-call-btn').hide();
     });
     peer.on('error', function (err) {
         showErrorMessage(err);
@@ -239,6 +243,7 @@ function recive(){
         showErrorMessage("Connection closed");
         $('.chat-footer').hide();
         $('.connectedTO').html('');
+        $('.new-call-btn').hide();
     });
 };
 function showWormholeStatus(upload,download){
@@ -288,6 +293,7 @@ function send(){
             showErrorMessage('connection closed');
             $('.chat-footer').hide();
             $('.connectedTO').html('');
+            $('.new-call-btn').hide();
         }
     }
     if(fileHash != ""){
@@ -317,6 +323,7 @@ function send(){
             showErrorMessage('connection closed');
             $('.chat-footer').hide();
             $('.connectedTO').html('');
+            $('.new-call-btn').hide();
         }
     }
 };
@@ -325,6 +332,7 @@ function join(id) {
         showInfoMessage("Closing current connection");
         $('.chat-footer').hide();
         $('.connectedTO').html('');
+        $('.new-call-btn').hide();
         $('.chat').html('');
         conn.close();
     }
@@ -335,6 +343,7 @@ function join(id) {
         showSuccessMessage("Connected to: " + conn.peer);
         $('.connectedTO').html(conn.peer);
         $('.chat-footer').show();
+        $('.new-call-btn').show();
     });
     other = id;
     recive();
