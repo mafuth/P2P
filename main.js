@@ -89,7 +89,7 @@ function seedFile() {
             fileHash = torrent.infoHash;
             const interval = setInterval(function () {
                 showWormholeStatus(torrent.uploadSpeed,torrent.downloadSpeed);
-            }, 1000)
+            }, 5000)
             torrent.on('done', function () {
                 clearInterval(interval)
             })
@@ -114,7 +114,6 @@ function initialize() {
             $('.my-hash-qr').attr('src',qr);
             $('.my-hash-qr').show();
             $('.new-con-btn').show();
-            $('.new-call-btn').show();
             $('.myID').html(me);
             $('.chat').html('');
             showSuccessMessage('Connection made to peer network');
@@ -270,10 +269,10 @@ function onTorrent(torrent){
         file.getBlobURL(function (err, url) {
           if (err) return console.log(err.message)
           if(checkImage(file.name) == true){
-            buildMessage('from','<img src="'+url+'" class="w-100"/>');
+            buildMessage('from','<img src="'+url+'" class="w-50 h-50"/>');
           }
           if(file.name.endsWith('.mp4')){
-            buildMessage('from','<video src="'+url+'" class="w-100" controls></video>');
+            buildMessage('from','<video src="'+url+'" class="w-50 h-50" controls></video>');
           }
           if(!file.name.endsWith('.mp4') && checkImage(file.name) == false){
             buildMessage('from','<a href="' + url + '" target="_blank">Download File: ' + file.name + '</a>');
